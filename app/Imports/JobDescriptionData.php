@@ -27,24 +27,20 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
         $user = Auth::user();
 
         foreach ($rows as $row) {
-
             // Trim all fields in the row
             $trimmedRow = $row->map(function ($item) {
                 return is_string($item) ? trim($item) : $item;
             });
-            // Skip processing if the row is empty
 
+            // Skip processing if the row is empty
             if ($trimmedRow->filter()->isEmpty()) {
                 continue;
             }
 
-
             // Extract specializations data
             $specializations = $this->extractSpecializations($trimmedRow);
 
-            // Process and save specializations
-
-            // Extract and save entities
+            // Process and save entities
             $jobDescriptionData = $this->saveEntities($trimmedRow);
 
             // Map gender value from Arabic to boolean
@@ -87,7 +83,7 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
 
                 if (preg_match('/معهد|معاهد|المعهد/', $specialization)) {
                     $degreeType = 'Higher-Institute';
-                    $category = 2;
+                    $category = '2';
                 }
 
                 $precisesArray = [];
@@ -143,13 +139,12 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
             'vacancies' => $row['alaadd_almtlob'],
             'job_title' => $row['almsm_alothyfy'],
             'card_number' => $row['rkm_btak_alosf_alothyfy'],
-            'category' => $this->getCategory($row['alakhtsas_alaaam_1']),
+            'category' => '2',
             'work_centers' => intval($row['alaadd_almtlob']),
             'entry_date' => now()->format('Y-m-d'),
             'modification_date' => now()->format('Y-m-d'),
             'status' => 0,
             'assignees' => 0,
-
         ];
     }
 
@@ -167,7 +162,7 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
             return 1;
         }
 
-        return null;
+        return 2;
     }
 
     /**
@@ -208,31 +203,25 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
                 ['name' => $spec['name']],
                 ['category' => $spec['category'], 'type' => $spec['type']]
             );
-    
+
             foreach ($spec['precise'] as $precise) {
-                // Check if $precise is empty, if yes, skip saving it
-                if (empty($precise)) {
-                    continue;
+                if (!empty($precise)) {
+                    $scientificPrecise = ScientificCertificatePrecise::updateOrCreate([
+                        'name' => $precise,
+                        'category' => $spec['category'] ?? null,
+                        'certificate_general_id' => $scientificGeneral->id,
+                    ]);
                 }
-    
-                $scientificPrecise = ScientificCertificatePrecise::updateOrCreate([
-                    'name' => $precise,
-                    'category' => $spec['category'] ?? null,
-                    'certificate_general_id' => $scientificGeneral->id,
-                ]);
-    
-                // Save specialization needed
+
                 JobDescriptionSpecializationNeeded::updateOrCreate([
                     'job_description_id' => $jobDescriptionId,
                     'degree' => $spec['type'],
                     'specialization_needed' => $scientificGeneral->name,
-                    'specialization_needed_precise' => $scientificPrecise ? $scientificPrecise->name : null,
+                    'specialization_needed_precise' => !empty($precise) ? $scientificPrecise->name : null,
                 ]);
             }
         }
     }
-    
-    
 
     /**
      * Get category based on specialization_needed.
@@ -243,10 +232,10 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
     private function getCategory(string $specializationNeeded)
     {
         if (preg_match('/معهد|معاهد|المعهد/', $specializationNeeded)) {
-            return 2;
+            return '2';
         }
 
-        return null;
+        return '2';
     }
 
     public function getCsvSettings(): array

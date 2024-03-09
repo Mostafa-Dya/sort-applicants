@@ -6,6 +6,8 @@ use App\Models\Applicant;
 use App\Models\DesireData;
 use App\Models\SpecializationData;
 use App\Models\JobDescriptionTable;
+use App\Models\ScientificCertificateGeneral;
+use App\Models\ScientificCertificatePrecise;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -70,8 +72,20 @@ class ApplicantDataImport implements ToCollection, WithHeadingRow, WithCustomCsv
      */
     private function updateOrCreateApplicant(Applicant $applicant, Collection $data, $user)
     {
+        
         $birthDate = Carbon::createFromFormat('d/m/Y', "{$data['yom_almylad']}/{$data['shhr_almylad']}/{$data['sn_tarykh_almylad']}")->toDateString();
+       
+        $generalCertificate = ScientificCertificateGeneral::firstOrCreate([
+            'name' => $data['alakhtsas_alaaam'],
+            'type' => 'Higher-Institute',
+            'category' =>'2'
+        ]);
 
+        $preciseCertificate = ScientificCertificatePrecise::firstOrCreate([
+            'name' => $data['alakhtsas_aldkyk'],
+            'category' =>'2',
+            'certificate_general_id' => $generalCertificate->id,
+        ]);
         $applicant->fill([
             'fullName' => $data['alasm_althlathy'],
             'gender' => $data['algns'] === 'زكر' ? 0 : ($data['algns'] === 'أنثى' ? 1 : null),

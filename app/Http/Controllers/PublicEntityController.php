@@ -9,7 +9,7 @@ use App\Models\AffiliatedEntity;
 use App\Models\SubAffiliatedEntity;
 
 class PublicEntityController extends Controller
-{            // print_r($rowData);
+{            
 
     public function create(Request $request)
     {

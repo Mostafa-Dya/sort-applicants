@@ -16,7 +16,7 @@ class ApiController extends Controller
 
         $request->validate([
             "name"  =>  "required",
-            "email" =>  "required|email|unique:users",
+            "email" =>  "required|string|unique:users",
             "password"  =>  "required|confirmed"
         ]);
         // Save Data in database
@@ -32,7 +32,7 @@ class ApiController extends Controller
             'statusCheck' => false,
             'sortable' => false,
 
-            'canActive'=>false,
+            'canActive'=>true,
 
             'addApplicants' => false,
             'addCertificate' => false,
@@ -64,7 +64,7 @@ class ApiController extends Controller
     public function login(Request $request){
         // Data validation
         $request->validate([
-            "email" =>  "required|email",
+            "email" =>  "required|string",
             "password"  =>  "required"
         ]);
     

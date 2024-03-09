@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('sub_entity')->nullable();
             $table->string('affiliate_entity')->nullable();
             $table->string('sub_affiliate_entity')->nullable();
-            $table->boolean('gender_needed')->nullable();
+            $table->integer('gender_needed')->nullable();
 
             $table->string('general')->nullable();
             $table->string('precise')->nullable();

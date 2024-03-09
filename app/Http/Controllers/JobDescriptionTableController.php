@@ -147,7 +147,7 @@ class JobDescriptionTableController extends Controller
 
             'affiliate_entity' => 'nullable|string',
             'sub_affiliate_entity' => 'nullable|string',
-            'gender_needed' => 'boolean',
+            'gender_needed' => 'integer',
 
         ]);
 
@@ -220,7 +220,7 @@ class JobDescriptionTableController extends Controller
 
             'affiliate_entity' => 'nullable|string',
             'sub_affiliate_entity' => 'nullable|string',
-            'gender_needed' => 'boolean',
+            'gender_needed' => 'integer',
         ]);
 
         $work_centers = $request->input('vacancies') - $request->input('assignees');
@@ -324,44 +324,53 @@ class JobDescriptionTableController extends Controller
     }
 
 
+
+    
     public function acceptApplicants(Request $request)
     {
         // Retrieve all job descriptions
         $jobDescriptions = JobDescriptionTable::all();
-    
+
         // Track accepted applicants and their corresponding job descriptions
         $acceptedApplicants = [];
-    
+
         // Iterate through each job description
         foreach ($jobDescriptions as $jobDescription) {
             // If vacancies are already filled or job description status is 0, skip to the next job description
             if ($jobDescription->assignees >= $jobDescription->vacancies || $jobDescription->status == 0) {
                 continue;
             }
-    
+
             // Retrieve applicants for this job description
-            $applicants = Applicant::whereHas('desireData', function ($query) use ($jobDescription) {
+            $applicantsQuery = Applicant::whereHas('desireData', function ($query) use ($jobDescription) {
                 $query->where([
                     ['governorateDesire', '=', $jobDescription->governorate],
                     ['publicEntitySide', '=', $jobDescription->public_entity],
                     ['cardNumberDesire', '=', $jobDescription->card_number],
                 ]);
-            })->with('desireData', 'specializationData')->get();
-    
+            })->with('desireData', 'specializationData');
+
+            // Filter applicants based on gender if the job description is gender-specific
+            if ($jobDescription->gender_needed === 0 || $jobDescription->gender_needed === 1) {
+                $applicantsQuery->where('gender', $jobDescription->gender_needed);
+            }
+
+            $applicants = $applicantsQuery->get();
+
             // Sort all applicants based on graduation rate, then birthdate
             $applicants = $applicants->sortByDesc(function ($applicant) {
                 // Split the graduation rate into integer and fractional parts
                 $parts = explode('.', $applicant->graduationRate);
-    
+
                 // Compare the first two digits after the comma
                 $firstTwoDigits = $parts[0] . '.' . substr($parts[1], 0, 2);
-    
+
                 // Compare the first three digits after the comma if available
                 $nextThreeDigits = isset($parts[1][2]) ? substr($parts[1], 0, 3) : '';
-    
+
                 // Combine for comparison
                 $combined = $firstTwoDigits;
-    
+
                 // Check if other applicants have the same graduation rate (2 numbers after comma)
                 if ($applicant->graduationRate == $firstTwoDigits) {
                     // All applicants have the same graduation rate (2 numbers after comma), check the next condition
@@ -369,20 +378,20 @@ class JobDescriptionTableController extends Controller
                 } else {
                     // Sort by graduation rate with three digits after the comma if available
                     $combined .= $nextThreeDigits;
-    
+
                     // Check if other applicants have the same graduation rate (3 numbers after comma)
                     if ($applicant->graduationRate == ($firstTwoDigits . $nextThreeDigits)) {
                         // All applicants have the same graduation rate (3 numbers after comma), sort by birth date
                         $combined .= $applicant->birthDate;
                     }
                 }
-    
+
                 return $combined;
             });
-    
+
             // Track the number of vacancies filled
             $filledVacancies = 0;
-    
+
             // Iterate through sorted applicants
             foreach ($applicants as $applicant) {
                 // If there are still vacancies available and both job description status and applicant status are 1, accept the applicant
@@ -391,30 +400,43 @@ class JobDescriptionTableController extends Controller
                     if (isset($acceptedApplicants[$applicant->id])) {
                         continue; // Skip this applicant
                     }
-    
+
                     // Check if the applicant's certificate matches any values in the specialization_needed array
                     $certificateData = json_decode($applicant->certificate, true);
                     $general = $certificateData['general'];
                     $precise = $certificateData['precise'];
                     $specializationNeeded = collect($jobDescription->specialization_needed)->pluck('specialization_needed', 'specialization_needed_precise')->toArray();
-    
-                    if (!isset($specializationNeeded[$general]) || !in_array($precise, $specializationNeeded)) {
-                        continue; // Skip this applicant if the certificate doesn't match
-                    }
-    
+
+                    // // Check if the job description table has both general and precise certificates
+                    // $hasGeneralAndPrecise = collect($specializationNeeded)->filter(function ($item, $key) {
+                    //     return !is_null($item) && $item !== '';
+                    // })->count() > 0;
+
+                    // if ($hasGeneralAndPrecise) {
+                    //     // Both general and precise certificates are present in the job description table
+                    //     if (!isset($specializationNeeded[$general]) || !in_array($precise, $specializationNeeded)) {
+                    //         continue; // Skip this applicant if the certificate doesn't match
+                    //     }
+                    // } else {
+                    //     // Only the general certificate is present in the job description table
+                    //     if (!isset($specializationNeeded[$general])) {
+                    //         continue; // Skip this applicant if the general certificate doesn't match
+                    //     }
+                    // }
+
                     // Update applicant details
                     $applicant->destination = $jobDescription->public_entity;
                     $applicant->named = $jobDescription->job_title;
                     $applicant->cardNumber = $jobDescription->card_number;
                     $applicant->accepted = true;
                     $applicant->sub_entity = $jobDescription->sub_entity;
-    
+
                     // Find the index of the accepted job description within the desireData array
                     $desireOrderIndex = 0;
                     foreach ($applicant->desireData as $index => $desire) {
                         // Convert cardNumberDesire to integer for comparison
                         $desireCardNumber = intval($desire->cardNumberDesire);
-                        
+
                         // Check if the converted cardNumberDesire matches the card_number of the current job description
                         if ($desireCardNumber === $jobDescription->card_number) {
                             // Set the desireOrderIndex to the current index
@@ -422,20 +444,20 @@ class JobDescriptionTableController extends Controller
                             break;
                         }
                     }
-    
+
                     // Set the desireOrder for the applicant
                     $applicant->desireOrder = $desireOrderIndex;
-    
+
                     // Save the applicant
                     $applicant->save();
-    
+
                     // Update job description table
                     $jobDescription->assignees++;
                     $jobDescription->save();
-    
+
                     // Add the applicant to the accepted applicants list
                     $acceptedApplicants[$applicant->id] = true;
-    
+
                     // Increment filled vacancies count
                     $filledVacancies++;
                 } else {
@@ -443,14 +465,14 @@ class JobDescriptionTableController extends Controller
                     break;
                 }
             }
+
         }
-    
+
         return response()->json([
             'message' => 'Applicants accepted successfully.',
         ], 200);
     }
-    
-    
+
     
     
     public function revertAcceptedApplicants(Request $request)

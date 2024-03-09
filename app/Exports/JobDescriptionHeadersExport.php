@@ -74,7 +74,7 @@ class JobDescriptionHeadersExport implements FromCollection, WithHeadings, Shoul
         $sheet->setRightToLeft(true);
 
         // Apply styling to the table values
-        $sheet->getStyle('A2:P2')->applyFromArray([
+        $sheet->getStyle('A2:P100')->applyFromArray([
             'font' => [
                 'size' => 16,
             ],
