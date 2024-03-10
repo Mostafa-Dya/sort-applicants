@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\User;
 
 class UsersTableSeeder extends Seeder
 {
@@ -14,19 +15,11 @@ class UsersTableSeeder extends Seeder
     {
         // Create a user with ADMIN role
         $user = User::create([
-            'name' => 'Admin Admin',
-            'email' => 'admin@example.com',
+            'name' => 'Admin',
+            'email' => 'Admin',
             'password' => bcrypt('P@$$W0RD'), // You can replace 'adminpassword' with the desired password
             'role' => 'Admin',
         ]);
 
-        // Create permissions for the ADMIN user
-        Permissions::create([
-            'user_id' => $user->id,
-            'create' => true,
-            'read' => true,
-            'update' => true,
-            'delete' => true,
-        ]);
     }
 }
