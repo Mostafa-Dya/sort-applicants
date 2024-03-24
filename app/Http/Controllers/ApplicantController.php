@@ -208,7 +208,8 @@ private function applyNumericOrStringSearchCondition($query, $field, $value)
             'accepted' => 'boolean',
             'exam_result' => 'nullable|numeric',
             'the_ministry'=>'nullable|string',
-            'sub_entity'=>'nullable|string'
+            'sub_entity'=>'nullable|string',
+            'gender'=>'required|boolean'
         ]);
     
         // Manually check and decode the 'certificate' field
@@ -256,6 +257,7 @@ private function applyNumericOrStringSearchCondition($query, $field, $value)
             'modificationDate' => $request->input('modificationDate'),
             'the_ministry' => $request->input('the_ministry'),
             'sub_entity' => $request->input('sub_entity'),
+            'gender' => $request->input('gender'),
         ];
     
         // Create a new record

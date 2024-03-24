@@ -50,7 +50,7 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
             $jobDescriptionData['gender_needed'] = $gender;
             $jobDescriptionData['record_entry'] = $user->name;
             $jobDescriptionData['last_modifier'] = $user->name;
-            $jobDescriptionData['audited_by'] = $user->name;
+            // $jobDescriptionData['audited_by'] = $user->name;
 
             // Create or update the JobDescriptionTable record
             $jobDescriptionId = $this->saveJobDescription($jobDescriptionData);
@@ -84,6 +84,8 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
                 if (preg_match('/معهد|معاهد|المعهد/', $specialization)) {
                     $degreeType = 'Higher-Institute';
                     $category = '2';
+                }else{
+                    $category = '2';
                 }
 
                 $precisesArray = [];
@@ -115,21 +117,40 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
      */
     private function saveEntities(Collection $row)
     {
-        $governorateName = $row['almhafth'];
+   // Check and add governorate
+    $governorateName = $row['almhafth'];
+    if (!empty($governorateName)) {
         $governorate = Governorate::firstOrCreate(['name' => $governorateName]);
+        $data['governorate'] = $governorateName;
+    }
 
-        $publicEntityName = $row['alozar'];
+    // Check and add public entity
+    $publicEntityName = $row['alozar'];
+    if (!empty($publicEntityName)) {
         $publicEntity = PublicEntity::firstOrCreate(['name' => $publicEntityName]);
+        $data['public_entity'] = $publicEntityName;
+    }
 
-        $subEntityName = $row['algh_alfraay'];
-        $subEntity = SubEntity::firstOrCreate(['name' => $subEntityName, 'public_entity_id' => $publicEntity->id]);
+    // Check and add sub entity
+    $subEntityName = $row['algh_alfraay'];
+    if (!empty($subEntityName)) {
+        $subEntity = SubEntity::firstOrCreate(['name' => $subEntityName, 'public_entity_id' => $publicEntity->id ?? null]);
+        $data['sub_entity'] = $subEntityName;
+    }
 
-        $affiliateEntityName = $row['algh_altabaa'];
-        $affiliateEntity = AffiliatedEntity::firstOrCreate(['name' => $affiliateEntityName, 'sub_entity_id' => $subEntity->id]);
+    // Check and add affiliate entity
+    $affiliateEntityName = $row['algh_altabaa'];
+    if (!empty($affiliateEntityName)) {
+        $affiliateEntity = AffiliatedEntity::firstOrCreate(['name' => $affiliateEntityName, 'sub_entity_id' => $subEntity->id ?? null]);
+        $data['affiliate_entity'] = $affiliateEntityName;
+    }
 
-        $subAffiliateEntityName = $row['algh_altabaa_alfraay'];
-        $subAffiliateEntity = SubAffiliatedEntity::firstOrCreate(['name' => $subAffiliateEntityName, 'affiliated_entity_id' => $affiliateEntity->id]);
-
+    // Check and add sub affiliate entity
+    $subAffiliateEntityName = $row['algh_altabaa_alfraay'];
+    if (!empty($subAffiliateEntityName)) {
+        $subAffiliateEntity = SubAffiliatedEntity::firstOrCreate(['name' => $subAffiliateEntityName, 'affiliated_entity_id' => $affiliateEntity->id ?? null]);
+        $data['sub_affiliate_entity'] = $subAffiliateEntityName;
+    }
         return [
             'governorate' => $governorateName,
             'public_entity' => $publicEntityName,
@@ -156,13 +177,13 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
      */
     private function mapGender(?string $genderValue)
     {
-        if ($genderValue === 'زكور') {
+        if ($genderValue === 'زكور' || $genderValue === 'ذكور') {
             return 0;
         } elseif ($genderValue === 'إناث') {
             return 1;
+        } else {
+            return 2;
         }
-
-        return 2;
     }
 
     /**
@@ -233,9 +254,10 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
     {
         if (preg_match('/معهد|معاهد|المعهد/', $specializationNeeded)) {
             return '2';
+        }else{
+            return '2';
         }
 
-        return '2';
     }
 
     public function getCsvSettings(): array
