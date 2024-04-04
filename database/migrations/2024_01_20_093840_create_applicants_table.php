@@ -47,6 +47,7 @@ return new class extends Migration
 
             $table->integer('exam_result')->nullable();
             
+            $table->string('reason')->nullable();
 
 
 

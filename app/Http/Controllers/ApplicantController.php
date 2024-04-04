@@ -82,7 +82,16 @@ class ApplicantController extends Controller
     private function applyStringSearchCondition($query, $field, $value)
     {
         if ($value !== null) {
-            $query->where($field, 'like', '%' . $value . '%');
+            // Check if the field is governorate
+            if ($field === 'governorate') {
+                $query->where(function ($query) use ($field, $value) {
+                    $query->where($field, $value)
+                        ->orWhere($field, 'like', $value . ' -%'); 
+                });
+            } else {
+                // Apply the default like condition for other fields
+                $query->where($field, 'like', '%' . $value . '%');
+            }
         }
     }
 

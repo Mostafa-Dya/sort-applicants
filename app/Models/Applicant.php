@@ -43,6 +43,7 @@ class Applicant extends Model
         'entryDate',
         'status',
         'accepted',
+        'reason'
     ];
 
 

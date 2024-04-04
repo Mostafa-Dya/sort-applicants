@@ -88,7 +88,7 @@ class ApplicantDataImport implements ToCollection, WithHeadingRow, WithCustomCsv
         ]);
         $applicant->fill([
             'fullName' => $data['alasm_althlathy'],
-            'gender' => $data['algns'] === 'زكر' ? 0 : ($data['algns'] === 'أنثى' ? 1 : null),
+            'gender' => $data['algns'] === 'زكر' ||'ذكر' ? 0 : ($data['algns'] === 'أنثى'||'انثى' ? 1 : null),
             'motherName' => $data['asm_alam'],
             'birthDate' => $birthDate,
             'governorate' => $data['almhafth'],
@@ -156,13 +156,13 @@ class ApplicantDataImport implements ToCollection, WithHeadingRow, WithCustomCsv
      */
     private function saveDesireAndSpecializationData(Applicant $applicant, array $desireData, JobDescriptionTable $jobDescription)
     {
-        $desire = $applicant->desireData()->create([
+        $desire = $applicant->desireData()->firstOrCreate([
             'governorateDesire' => $desireData['governorateDesire'],
             'publicEntitySide' => $desireData['publicEntitySide'],
             'cardNumberDesire' => $desireData['cardNumberDesire'],
         ]);
 
-        $specialization = $applicant->specializationData()->create([
+        $specialization = $applicant->specializationData()->firstOrCreate([
             'desire' => $jobDescription->public_entity,
             'namedVal' => $jobDescription->job_title,
             'cardNumberVal' => $jobDescription->card_number,

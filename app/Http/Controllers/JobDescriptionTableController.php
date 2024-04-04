@@ -80,7 +80,16 @@ class JobDescriptionTableController extends Controller
     private function applyStringSearchCondition($query, $field, $value)
     {
         if ($value !== null) {
-            $query->where($field, 'like', '%' . $value . '%');
+            // Check if the field is governorate
+            if ($field === 'governorate') {
+                $query->where(function ($query) use ($field, $value) {
+                    $query->where($field, $value)
+                        ->orWhere($field, 'like', $value . ' -%'); 
+                });
+            } else {
+                // Apply the default like condition for other fields
+                $query->where($field, 'like', '%' . $value . '%');
+            }
         }
     }
 
@@ -358,7 +367,7 @@ class JobDescriptionTableController extends Controller
             $applicants = $applicantsQuery->get();
 
             // Sort all applicants based on graduation rate, then birthdate
-            $applicants = $applicants->sortByDesc(function ($applicant) {
+            $applicants = $applicants->sortBy(function ($applicant) {
                 // Split the graduation rate into integer and fractional parts
                 $parts = explode('.', $applicant->graduationRate);
 
@@ -401,28 +410,7 @@ class JobDescriptionTableController extends Controller
                         continue; // Skip this applicant
                     }
 
-                    // Check if the applicant's certificate matches any values in the specialization_needed array
-                    $certificateData = json_decode($applicant->certificate, true);
-                    $general = $certificateData['general'];
-                    $precise = $certificateData['precise'];
-                    $specializationNeeded = collect($jobDescription->specialization_needed)->pluck('specialization_needed', 'specialization_needed_precise')->toArray();
 
-                    // // Check if the job description table has both general and precise certificates
-                    // $hasGeneralAndPrecise = collect($specializationNeeded)->filter(function ($item, $key) {
-                    //     return !is_null($item) && $item !== '';
-                    // })->count() > 0;
-
-                    // if ($hasGeneralAndPrecise) {
-                    //     // Both general and precise certificates are present in the job description table
-                    //     if (!isset($specializationNeeded[$general]) || !in_array($precise, $specializationNeeded)) {
-                    //         continue; // Skip this applicant if the certificate doesn't match
-                    //     }
-                    // } else {
-                    //     // Only the general certificate is present in the job description table
-                    //     if (!isset($specializationNeeded[$general])) {
-                    //         continue; // Skip this applicant if the general certificate doesn't match
-                    //     }
-                    // }
 
                     // Update applicant details
                     $applicant->destination = $jobDescription->public_entity;
@@ -461,16 +449,37 @@ class JobDescriptionTableController extends Controller
                     // Increment filled vacancies count
                     $filledVacancies++;
                 } else {
-                    // Break the loop if all vacancies are filled or the conditions are not met
-                    break;
+                    // Reject the applicant and provide a reason based on different conditions
+                    if (!isset($acceptedApplicants[$applicant->id])) {
+                        $rejectionReason = '';
+            
+                        // Check for low graduation rate
+                        if ($applicant->graduationRate < $jobDescription->required_graduation_rate) {
+                            $rejectionReason = 'Low graduation rate.';
+                        }
+            
+                        // Check for age requirement
+                        if ($applicant->birthDate < $jobDescription->minimum_birth_date) {
+                            $rejectionReason = 'Age requirement not met.';
+                        }
+            
+                        // Check for other requirements
+                        if (!$rejectionReason) {
+                            $rejectionReason = 'Does not meet requirements.';
+                        }
+            
+                        // Set rejection reason for the applicant
+                        $applicant->reason = $rejectionReason;
+                        $applicant->save();
+                    }
                 }
             }
 
         }
 
-        return response()->json([
-            'message' => 'Applicants accepted successfully.',
-        ], 200);
+    return response()->json([
+        'message' => 'Applicants accepted successfully.',
+    ], 200);
     }
 
     
