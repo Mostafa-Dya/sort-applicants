@@ -77,7 +77,7 @@ class ApplicantDataImport implements ToCollection, WithHeadingRow, WithCustomCsv
        
         $generalCertificate = ScientificCertificateGeneral::firstOrCreate([
             'name' => $data['alakhtsas_alaaam'],
-            'type' => 'Higher-Institute',
+            'type' => 'Intermediate-institute',
             'category' =>'2'
         ]);
 
@@ -88,7 +88,11 @@ class ApplicantDataImport implements ToCollection, WithHeadingRow, WithCustomCsv
         ]);
         $applicant->fill([
             'fullName' => $data['alasm_althlathy'],
-            'gender' => $data['algns'] === 'زكر' ||'ذكر' ? 0 : ($data['algns'] === 'أنثى'||'انثى' ? 1 : null),
+            'gender' => $data['algns'] === 'زكر' ? 0 :
+            ($data['algns'] === 'ذكر' ? 0 :
+            ($data['algns'] === 'أنثى' ? 1 :
+            ($data['algns'] === 'انثى' ? 1 : null))),
+            
             'motherName' => $data['asm_alam'],
             'birthDate' => $birthDate,
             'governorate' => $data['almhafth'],

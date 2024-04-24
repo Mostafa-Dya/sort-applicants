@@ -82,7 +82,7 @@ class JobDescriptionData implements ToCollection, WithHeadingRow, WithCustomCsvS
                 $category = null;
 
                 if (preg_match('/معهد|معاهد|المعهد/', $specialization)) {
-                    $degreeType = 'Higher-Institute';
+                    $degreeType = 'Intermediate-institute';
                     $category = '2';
                 }else{
                     $category = '2';
